@@ -20,7 +20,7 @@ public class CountDownLatchHandler implements MessageHandler {
 
   @Override
   public void handleMessage(Message<?> message) throws MessagingException {
-    LOGGER.info("received message='{}'", message);
+    LOGGER.info("Kafka received message='{}'", message);
     latch.countDown();
   }
 }
