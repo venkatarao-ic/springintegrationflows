@@ -2,9 +2,6 @@ package com.bank.mhub.configuration;
 
 import com.bank.mhub.model.Payment;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ibm.msg.client.jms.JmsConnectionFactory;
-import com.ibm.msg.client.jms.JmsFactoryFactory;
-import com.ibm.msg.client.wmq.WMQConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +26,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ConsumerProperties;
 
 import javax.jms.ConnectionFactory;
-import javax.jms.JMSException;
 import java.util.Map;
 
 
@@ -48,6 +44,9 @@ public class IntegrationFlowsConfig {
 
     @Value("${mq.queue.payment.out}")
     private String paymentOutQueue;
+
+    @Value("${mq.queue.payment.in2}")
+    private String paymentInQueue2;
 
     @Value("${kafka.topic.payment.in}")
     private String kafkaPaymentIn;
@@ -80,13 +79,13 @@ public class IntegrationFlowsConfig {
      */
     @Bean
     public IntegrationFlow flowMQToMQ(ConnectionFactory connectionFactory) {
-        return IntegrationFlows.from(Jms.inboundAdapter(mqConnectionFactory())
+        return IntegrationFlows.from(Jms.inboundAdapter(connectionFactory)
                 .destination(paymentInQueue), e -> e.poller(Pollers
                 .fixedDelay(5000)
                 .maxMessagesPerPoll(2)))
                 .transform(Transformers.fromJson(Payment.class, new Jackson2JsonObjectMapper(objectMapper())))
                 .transform(Transformers.toJson())
-                .handle(Jms.outboundAdapter(mqConnectionFactory())
+                .handle(Jms.outboundAdapter(connectionFactory)
                         .destination(paymentOutQueue))
                 .get();
     }
@@ -115,8 +114,8 @@ public class IntegrationFlowsConfig {
      */
     @Bean
     public IntegrationFlow flowMQToKafka(ConnectionFactory connectionFactory) {
-        return IntegrationFlows.from(Jms.inboundAdapter(mqConnectionFactory())
-                .destination(paymentInQueue), e -> e.poller(Pollers
+        return IntegrationFlows.from(Jms.inboundAdapter(connectionFactory)
+                .destination(paymentInQueue2), e -> e.poller(Pollers
                 .fixedDelay(5000)
                 .maxMessagesPerPoll(2)))
                 .channel("integration.payment.jsonToObject.channel")
@@ -138,11 +137,11 @@ public class IntegrationFlowsConfig {
                         .maxMessagesPerPoll(2)))
                 .transform(Transformers.fromJson(Payment.class, new Jackson2JsonObjectMapper(objectMapper())))
                 .transform(Transformers.toJson())
-                .handle(Jms.outboundAdapter(mqConnectionFactory())
+                .handle(Jms.outboundAdapter(connectionFactory)
                         .destination(paymentOutQueue))
                 .get();
     }
-    @JmsListener(destination = "mq.payment.out")
+    @JmsListener(destination = "DEV.QUEUE.2")
     public void listen(String in) {
         logger.info("Message is being processed " + in);
     }
@@ -150,25 +149,6 @@ public class IntegrationFlowsConfig {
     @Bean
     public ObjectMapper objectMapper(){
         return new ObjectMapper();
-    }
-
-    @Bean
-    public JmsConnectionFactory mqConnectionFactory() {
-        try {
-            JmsFactoryFactory ff = JmsFactoryFactory.getInstance(WMQConstants.WMQ_PROVIDER);
-            JmsConnectionFactory connectionFactory = ff.createConnectionFactory();
-            connectionFactory.setStringProperty(WMQConstants.WMQ_HOST_NAME, "127.0.0.1");
-            connectionFactory.setIntProperty(WMQConstants.WMQ_PORT, 1414);
-            connectionFactory.setStringProperty(WMQConstants.WMQ_QUEUE_MANAGER, "QM2");
-            connectionFactory.setStringProperty(WMQConstants.USERID, "app");
-            connectionFactory.setStringProperty(WMQConstants.PASSWORD, "passw0rd");
-            connectionFactory.setStringProperty(WMQConstants.WMQ_CHANNEL, "DEV.APP.SVRCONN");
-            connectionFactory.setIntProperty(WMQConstants.WMQ_CONNECTION_MODE, WMQConstants.WMQ_CM_CLIENT);
-            return connectionFactory;
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        return null;
     }
 
 }

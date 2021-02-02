@@ -18,8 +18,8 @@ public class PaymentService {
         MessageBuilder.fromMessage(message);
         System.out.println("######################");
         System.out.println("Json to Object - " + message.getPayload());
-        Payment payment = (Payment) message.getPayload();
-        Message<?> newMessage = MessageBuilder.withPayload(payment.toString()).build();
+        //Payment payment = (Payment) message.getPayload();
+        Message<?> newMessage = MessageBuilder.withPayload(message.getPayload()).build();
        replyChannel.send(newMessage);
     }
 

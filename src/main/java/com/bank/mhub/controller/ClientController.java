@@ -33,10 +33,10 @@ public class ClientController {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Value("${mq.queue.payment.in:mq.payment.in}")
+    @Value("${mq.queue.payment.in:DEV.QUEUE.1}")
     private String paymentInQueue;
 
-    @Value("${mq.queue.payment.out:mq.payment.out}")
+    @Value("${mq.queue.payment.out:DEV.QUEUE.2}")
     private String paymentOutQueue;
 
     @Value("${kafka.topic.payment.in:kafka.payment.in}")
